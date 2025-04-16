@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from "@/components/ui/progress";
@@ -27,11 +26,11 @@ const Onboarding = () => {
   }) => {
     setIsSubmitting(true);
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) throw new Error('User not authenticated');
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) throw new Error('User not authenticated');
 
       const { error } = await supabase.from('user_preferences').insert({
-        user_id: userId,
+        user_id: user.id,
         job_title: data.jobTitle,
         location: data.location,
         is_remote: data.isRemote,
