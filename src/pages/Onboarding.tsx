@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from "@/components/ui/progress";
@@ -29,8 +30,10 @@ const Onboarding = () => {
       const user = (await supabase.auth.getUser()).data.user;
       if (!user) throw new Error('User not authenticated');
 
+      // Convert the UUID string to a number if needed
+      // We need to store the user ID in a way that matches the expected type in the database
       const { error } = await supabase.from('user_preferences').insert({
-        user_id: user.id,
+        user_id: parseInt(user.id.replace(/-/g, ''), 16) % 2147483647, // Convert UUID to a number within PostgreSQL integer range
         job_title: data.jobTitle,
         location: data.location,
         is_remote: data.isRemote,

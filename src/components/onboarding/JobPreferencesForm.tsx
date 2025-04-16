@@ -85,6 +85,10 @@ const JobPreferencesForm = ({ onSubmit }: JobPreferencesFormProps) => {
           placeholder="https://your-portfolio.com"
         />
       </div>
+
+      <div className="text-center">
+        <Button type="submit">Next</Button>
+      </div>
     </form>
   );
 };
