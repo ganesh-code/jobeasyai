@@ -4,20 +4,20 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 
-// Dummy job data
+// Dummy job data with email added
 const DUMMY_JOBS = [
-  { job_title: "Software Engineer", company: "TechCorp", location: "New York", platform: "LinkedIn", remote: false },
-  { job_title: "Frontend Developer", company: "WebWizards", location: "London", platform: "Indeed", remote: true },
-  { job_title: "React Developer", company: "AppGenius", location: "Bangalore", platform: "Naukri", remote: true },
-  { job_title: "Full Stack Developer", company: "StackInnovate", location: "New York", platform: "Glassdoor", remote: false },
-  { job_title: "UI Engineer", company: "DesignMasters", location: "Remote", platform: "LinkedIn", remote: true },
-  { job_title: "JavaScript Developer", company: "CodeCrafters", location: "London", platform: "Indeed", remote: false },
-  { job_title: "Software Developer", company: "DevSolutions", location: "Mumbai", platform: "Naukri", remote: false },
-  { job_title: "React Native Developer", company: "MobileMinds", location: "Bangalore", platform: "Glassdoor", remote: true },
-  { job_title: "Frontend Engineer", company: "UXPioneers", location: "New York", platform: "LinkedIn", remote: true },
-  { job_title: "Web Developer", company: "DigitalDreamers", location: "Remote", platform: "Indeed", remote: true }
+  { job_title: "Software Engineer", company: "TechCorp", location: "New York", platform: "LinkedIn", remote: false, contact_email: "recruiter@techcorp.com" },
+  { job_title: "Frontend Developer", company: "WebWizards", location: "London", platform: "Indeed", remote: true, contact_email: "careers@webwizards.com" },
+  { job_title: "React Developer", company: "AppGenius", location: "Bangalore", platform: "Naukri", remote: true, contact_email: null },
+  { job_title: "Full Stack Developer", company: "StackInnovate", location: "New York", platform: "Glassdoor", remote: false, contact_email: "jobs@stackinnovate.com" },
+  { job_title: "UI Engineer", company: "DesignMasters", location: "Remote", platform: "LinkedIn", remote: true, contact_email: "talent@designmasters.com" },
+  { job_title: "JavaScript Developer", company: "CodeCrafters", location: "London", platform: "Indeed", remote: false, contact_email: null },
+  { job_title: "Software Developer", company: "DevSolutions", location: "Mumbai", platform: "Naukri", remote: false, contact_email: "hr@devsolutions.com" },
+  { job_title: "React Native Developer", company: "MobileMinds", location: "Bangalore", platform: "Glassdoor", remote: true, contact_email: null },
+  { job_title: "Frontend Engineer", company: "UXPioneers", location: "New York", platform: "LinkedIn", remote: true, contact_email: "recruit@uxpioneers.com" },
+  { job_title: "Web Developer", company: "DigitalDreamers", location: "Remote", platform: "Indeed", remote: true, contact_email: "careers@digitaldreamers.com" }
 ];
 
 interface JobMatchingCardProps {
@@ -27,13 +27,14 @@ interface JobMatchingCardProps {
 const JobMatchingCard = ({ onMatchComplete }: JobMatchingCardProps) => {
   const [isMatching, setIsMatching] = useState(false);
   const [matchCount, setMatchCount] = useState(0);
+  const [emailCount, setEmailCount] = useState(0);
 
   const matchJobs = async () => {
     setIsMatching(true);
     setMatchCount(0);
+    setEmailCount(0);
 
     try {
-      // Get user preferences
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -48,17 +49,24 @@ const JobMatchingCard = ({ onMatchComplete }: JobMatchingCardProps) => {
         return;
       }
 
+      // Fetch user's resume
+      const { data: { publicUrl } } = supabase.storage
+        .from('resumes')
+        .getPublicUrl(`${user.id}/resume.pdf`);
+
+      if (!publicUrl) {
+        toast.warning('Please upload a resume first');
+        return;
+      }
+
       // Filter jobs based on preferences
       const matchedJobs = DUMMY_JOBS.filter(job => {
-        // Match by job title (contains)
         const titleMatch = job.job_title.toLowerCase().includes(preferences.job_title.toLowerCase());
-        
-        // Match by location (exact match or remote)
         const locationMatch = 
           job.location.toLowerCase() === preferences.location.toLowerCase() || 
           (preferences.is_remote && job.remote);
         
-        return titleMatch && locationMatch;
+        return titleMatch && locationMatch && job.contact_email;
       });
 
       if (matchedJobs.length === 0) {
@@ -66,23 +74,51 @@ const JobMatchingCard = ({ onMatchComplete }: JobMatchingCardProps) => {
         return;
       }
 
-      // Save matched jobs to applications table
+      // Save matched jobs and send emails
       for (const job of matchedJobs) {
-        const { error } = await supabase.from('job_applications').insert({
-          user_id: user.id,
-          job_title: job.job_title,
-          company: job.company,
-          platform: job.platform,
-          status: 'Applied',
-          date: new Date().toISOString(),
-        });
+        // Save job application
+        const { data: applicationData, error: applicationError } = await supabase
+          .from('job_applications')
+          .insert({
+            user_id: user.id,
+            job_title: job.job_title,
+            company: job.company,
+            platform: job.platform,
+            status: 'Applied',
+            date: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
 
-        if (!error) {
-          setMatchCount(prev => prev + 1);
+        if (applicationError) {
+          console.error('Job application save error:', applicationError);
+          continue;
         }
+
+        // Check if email exists and send
+        if (job.contact_email) {
+          const emailOutreachData = {
+            user_id: user.id,
+            job_application_id: applicationData.id,
+            recipient_email: job.contact_email,
+            subject: `Application for ${job.job_title} at ${job.company}`,
+            body: `Dear Recruiter,\n\nI'm excited about the ${job.job_title} position at ${job.company}. Please find my resume attached.\n\nBest regards,\n[Your Name]`,
+            status: 'Sent', // Placeholder, actual sending requires SendGrid
+          };
+
+          const { error: emailError } = await supabase
+            .from('email_outreach')
+            .insert(emailOutreachData);
+
+          if (!emailError) {
+            setEmailCount(prev => prev + 1);
+          }
+        }
+
+        setMatchCount(prev => prev + 1);
       }
 
-      toast.success(`${matchedJobs.length} jobs matched and applied`);
+      toast.success(`${matchedJobs.length} jobs matched, ${emailCount} emails prepared`);
       onMatchComplete();
     } catch (error: any) {
       toast.error(error.message || 'Failed to match jobs');
@@ -112,7 +148,10 @@ const JobMatchingCard = ({ onMatchComplete }: JobMatchingCardProps) => {
               {matchCount > 0 && ` (${matchCount} matched)`}
             </>
           ) : (
-            'Run AI Job Matching'
+            <>
+              <Mail className="mr-2 h-4 w-4" />
+              Run AI Job Matching
+            </>
           )}
         </Button>
         <p className="text-xs text-muted-foreground text-center">

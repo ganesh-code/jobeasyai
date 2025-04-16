@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      email_outreach: {
+        Row: {
+          body: string
+          error_message: string | null
+          id: string
+          job_application_id: string
+          recipient_email: string
+          sent_at: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          error_message?: string | null
+          id?: string
+          job_application_id: string
+          recipient_email: string
+          sent_at?: string | null
+          status: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          error_message?: string | null
+          id?: string
+          job_application_id?: string
+          recipient_email?: string
+          sent_at?: string | null
+          status?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_outreach_job_application_id_fkey"
+            columns: ["job_application_id"]
+            isOneToOne: false
+            referencedRelation: "job_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_applications: {
         Row: {
           company: string | null

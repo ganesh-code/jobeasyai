@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, Settings, LayoutDashboard } from "lucide-react";
@@ -6,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ApplicationsTable from "@/components/dashboard/ApplicationsTable";
+import EmailOutreachTable from "@/components/dashboard/EmailOutreachTable";
 import JobMatchingCard from "@/components/dashboard/JobMatchingCard";
 import {
   SidebarProvider,
@@ -119,25 +119,22 @@ const Dashboard = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  Recent Applications
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button variant="ghost" size="icon" className="h-4 w-4">
-                        ?
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      View your recent applications here
-                    </TooltipContent>
-                  </Tooltip>
-                </CardTitle>
+                <CardTitle>Recent Applications</CardTitle>
               </CardHeader>
               <CardContent>
                 <ApplicationsTable 
                   applications={applications}
                   isLoading={isLoading}
                 />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Email Outreach</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <EmailOutreachTable isLoading={isLoading} />
               </CardContent>
             </Card>
 
