@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,15 +18,21 @@ interface JobPreferencesFormProps {
     isRemote: boolean;
     portfolioUrl: string;
   }) => void;
+  isSubmitting: boolean;
+  onBack: () => void;
 }
 
 const CITIES = ["New York", "London", "Mumbai", "Bangalore", "Remote"];
 
-const JobPreferencesForm = ({ onSubmit }: JobPreferencesFormProps) => {
-  const [jobTitle, setJobTitle] = useState('');
-  const [location, setLocation] = useState('');
+const JobPreferencesForm = ({
+  onSubmit,
+  isSubmitting,
+  onBack,
+}: JobPreferencesFormProps) => {
+  const [jobTitle, setJobTitle] = useState("");
+  const [location, setLocation] = useState("");
   const [isRemote, setIsRemote] = useState(false);
-  const [portfolioUrl, setPortfolioUrl] = useState('');
+  const [portfolioUrl, setPortfolioUrl] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

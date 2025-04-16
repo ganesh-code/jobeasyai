@@ -1,74 +1,95 @@
-
-import { useState } from 'react';
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { HelpCircle, Upload } from "lucide-react";
 
 interface ResumeUploadProps {
-  onUploadComplete: (url: string) => void;
+  onNext: () => void;
+  onBack: () => void;
 }
 
-const ResumeUpload = ({ onUploadComplete }: ResumeUploadProps) => {
+const ResumeUpload = ({ onNext, onBack }: ResumeUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
-      toast.error('Please upload a PDF file');
+    if (file.type !== "application/pdf") {
+      toast.error("Please upload a PDF file");
       return;
     }
 
     setIsUploading(true);
     try {
-      const userId = (await supabase.auth.getUser()).data.user?.id;
-      if (!userId) throw new Error('User not authenticated');
-
-      const fileName = `${userId}/${Date.now()}-${file.name}`;
       const { data, error } = await supabase.storage
-        .from('resumes')
-        .upload(fileName, file);
+        .from("resumes")
+        .upload(`resumes/${file.name}`, file);
 
-      if (error) throw error;
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('resumes')
-        .getPublicUrl(fileName);
-
-      onUploadComplete(publicUrl);
-      toast.success('Resume uploaded successfully');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to upload resume');
+      if (data) {
+        onNext();
+      }
+    } catch (error: unknown) {
+      console.error("Error uploading resume:", error);
+      if (error instanceof Error) {
+        alert(`Failed to upload resume: ${error.message}`);
+      } else {
+        alert("Failed to upload resume. Please try again.");
+      }
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Label htmlFor="resume">Upload Resume</Label>
-        <Tooltip>
-          <TooltipTrigger>
-            <HelpCircle className="h-4 w-4 text-muted-foreground" />
-          </TooltipTrigger>
-          <TooltipContent>Upload resume to auto-fill applications</TooltipContent>
-        </Tooltip>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-4">Upload Your Resume</h2>
+        <p className="text-gray-600 mb-6">
+          Upload your resume in PDF format. We'll use this to help match you
+          with relevant job opportunities.
+        </p>
       </div>
-      <div className="flex items-center gap-4">
-        <Input
-          id="resume"
+
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+        <input
           type="file"
           accept=".pdf"
           onChange={handleFileUpload}
-          className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+          className="hidden"
+          id="resume-upload"
         />
-        {isUploading && <Upload className="h-4 w-4 animate-spin" />}
+        <label htmlFor="resume-upload" className="cursor-pointer block">
+          <div className="space-y-2">
+            <p className="text-gray-600">Drag and drop your resume here, or</p>
+            <Button variant="outline" disabled={isUploading}>
+              {isUploading ? "Uploading..." : "Select File"}
+            </Button>
+          </div>
+        </label>
+      </div>
+
+      <div className="flex justify-between">
+        <Button variant="outline" onClick={onBack} disabled={isUploading}>
+          Back
+        </Button>
+        <Button variant="outline" onClick={onNext} disabled={isUploading}>
+          Skip
+        </Button>
       </div>
     </div>
   );

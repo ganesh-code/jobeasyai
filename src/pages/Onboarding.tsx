@@ -33,8 +33,10 @@ const Onboarding = () => {
   const handleJobPreferences = async (data: JobPreferencesData) => {
     setIsSubmitting(true);
     try {
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) throw new Error("User not authenticated");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user found");
 
       const preferences: UserPreferences = {
         user_id: user.id,
@@ -51,44 +53,52 @@ const Onboarding = () => {
 
       if (error) throw error;
 
-      toast.success("Preferences saved successfully");
+      toast.success("Preferences saved successfully!");
       navigate("/dashboard");
     } catch (error) {
-      const pgError = error as PostgrestError;
-      toast.error(pgError.message || "Failed to save preferences");
+      if (error instanceof PostgrestError) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save preferences");
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <Card className="w-full max-w-lg">
-        <CardContent className="pt-6 space-y-6">
-          <Progress value={step === 1 ? 50 : 100} className="w-full" />
+  const totalSteps = 2;
+  const progress = (step / totalSteps) * 100;
 
-          {step === 1 ? (
-            <div className="space-y-6">
-              <ResumeUpload onUploadComplete={handleResumeUpload} />
-              <div className="flex justify-end">
-                <Button onClick={() => setStep(2)} disabled={!resumeUrl}>
-                  Next
-                </Button>
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-2xl">
+        <CardContent className="pt-6">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>
+                  Step {step} of {totalSteps}
+                </span>
+                <span>{Math.round(progress)}%</span>
               </div>
+              <Progress value={progress} />
             </div>
-          ) : (
-            <div className="space-y-6">
-              <JobPreferencesForm onSubmit={handleJobPreferences} />
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)}>
-                  Back
-                </Button>
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Saving..." : "Finish"}
-                </Button>
-              </div>
-            </div>
-          )}
+
+            {step === 1 && (
+              <ResumeUpload
+                onUploadComplete={handleResumeUpload}
+                onNext={() => setStep(2)}
+              />
+            )}
+
+            {step === 2 && (
+              <JobPreferencesForm
+                onSubmit={handleJobPreferences}
+                isSubmitting={isSubmitting}
+                onBack={() => setStep(1)}
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -6,18 +6,19 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth-context";
 import { AuthError } from "@supabase/supabase-js";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,46 +33,30 @@ const Auth = () => {
         await signIn(email, password);
         navigate("/dashboard");
       } else {
-        await signUp(email, password);
-        toast({
-          title: "Success!",
-          description: "Please check your email to confirm your account.",
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
         });
+
+        if (error) throw error;
+
+        toast.success(
+          "Account created successfully! Please check your email to verify your account."
+        );
         navigate("/onboarding");
       }
     } catch (error) {
-      const authError = error as AuthError;
-
-      // Check for specific error messages
-      if (authError.message.includes("Invalid login credentials")) {
-        toast({
-          variant: "destructive",
-          title: "Email not registered",
-          description:
-            "This email is not registered with us. Please try signing up instead.",
-          action: (
-            <Button
-              variant="ghost"
-              onClick={() => setIsSignIn(false)}
-              className="text-primary hover:text-primary"
-            >
-              Sign Up
-            </Button>
-          ),
-        });
+      if (error instanceof AuthError) {
+        toast.error(error.message);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: authError.message,
-        });
+        toast.error("An unexpected error occurred");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleAuth = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -79,24 +64,23 @@ const Auth = () => {
 
       if (error) throw error;
     } catch (error) {
-      const authError = error as AuthError;
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: authError.message,
-      });
+      if (error instanceof AuthError) {
+        toast.error(error.message);
+      } else {
+        toast.error("An unexpected error occurred");
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-primary">
-            JobEasyAI
-          </CardTitle>
-          <CardDescription className="text-lg">
-            {isSignIn ? "Sign in to your account" : "Create a new account"}
+        <CardHeader>
+          <CardTitle>{isSignIn ? "Sign In" : "Sign Up"}</CardTitle>
+          <CardDescription>
+            {isSignIn
+              ? "Enter your credentials to access your account"
+              : "Create a new account to get started"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -106,11 +90,9 @@ const Auth = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full"
               />
             </div>
             <div className="space-y-2">
@@ -118,39 +100,35 @@ const Auth = () => {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
-                className="w-full"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Loading..." : isSignIn ? "Sign In" : "Sign Up"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleSignIn}
-              disabled={loading}
-            >
-              Continue with Google
-            </Button>
-            <div className="text-center">
-              <button
-                type="button"
-                className="text-sm text-muted-foreground hover:text-primary"
-                onClick={() => setIsSignIn(!isSignIn)}
-              >
-                {isSignIn
-                  ? "Don't have an account? Sign up"
-                  : "Already have an account? Sign in"}
-              </button>
-            </div>
           </form>
         </CardContent>
+        <CardFooter className="flex flex-col space-y-4">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleAuth}
+            disabled={loading}
+          >
+            Continue with Google
+          </Button>
+          <Button
+            variant="link"
+            className="w-full"
+            onClick={() => setIsSignIn(!isSignIn)}
+          >
+            {isSignIn
+              ? "Don't have an account? Sign Up"
+              : "Already have an account? Sign In"}
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

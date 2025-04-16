@@ -2,30 +2,16 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./lib/auth-context";
-import { useAuth } from "./lib/auth-context";
+import AuthGuard from "./components/auth/AuthGuard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
-import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient();
-
-const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -35,22 +21,29 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/auth" replace />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/" element={<Index />} />
             <Route
-              path="/onboarding"
+              path="/auth"
               element={
-                <PrivateRoute>
-                  <Onboarding />
-                </PrivateRoute>
+                <AuthGuard requireAuth={false}>
+                  <Auth />
+                </AuthGuard>
               }
             />
             <Route
               path="/dashboard"
               element={
-                <PrivateRoute>
+                <AuthGuard>
                   <Dashboard />
-                </PrivateRoute>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/onboarding"
+              element={
+                <AuthGuard>
+                  <Onboarding />
+                </AuthGuard>
               }
             />
             <Route path="*" element={<NotFound />} />
