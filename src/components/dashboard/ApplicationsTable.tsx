@@ -24,13 +24,13 @@ interface ApplicationsTableProps {
 
 const ApplicationsTable = ({ applications, isLoading }: ApplicationsTableProps) => {
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div className="text-center py-8">Loading applications...</div>;
   }
 
   if (applications.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        No applications yet
+        No applications yet. Use AI Job Matching to apply to jobs that match your preferences.
       </div>
     );
   }

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ApplicationsTable from "@/components/dashboard/ApplicationsTable";
+import JobMatchingCard from "@/components/dashboard/JobMatchingCard";
 import {
   SidebarProvider,
   Sidebar,
@@ -112,6 +113,8 @@ const Dashboard = () => {
                   <div className="text-4xl font-bold">{applications.length}</div>
                 </CardContent>
               </Card>
+              
+              <JobMatchingCard onMatchComplete={fetchApplications} />
             </div>
 
             <Card>
