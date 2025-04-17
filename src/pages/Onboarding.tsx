@@ -9,6 +9,7 @@ import ResumeUpload from "@/components/onboarding/ResumeUpload";
 import JobPreferencesForm from "@/components/onboarding/JobPreferencesForm";
 import { PostgrestError } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import DashboardLayout from "@/components/layout/DashboardLayout";
 
 type UserPreferences =
   Database["public"]["Tables"]["user_preferences"]["Insert"];
@@ -70,38 +71,41 @@ const Onboarding = () => {
   const progress = (step / totalSteps) * 100;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-2xl">
-        <CardContent className="pt-6">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>
-                  Step {step} of {totalSteps}
-                </span>
-                <span>{Math.round(progress)}%</span>
+    <DashboardLayout>
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)]">
+        <Card className="w-full max-w-2xl">
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>
+                    Step {step} of {totalSteps}
+                  </span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <Progress value={progress} />
               </div>
-              <Progress value={progress} />
+
+              {step === 1 && (
+                <ResumeUpload
+                  onUploadComplete={handleResumeUpload}
+                  onNext={() => setStep(2)}
+                  onBack={() => navigate("/dashboard")}
+                />
+              )}
+
+              {step === 2 && (
+                <JobPreferencesForm
+                  onSubmit={handleJobPreferences}
+                  isSubmitting={isSubmitting}
+                  onBack={() => setStep(1)}
+                />
+              )}
             </div>
-
-            {step === 1 && (
-              <ResumeUpload
-                onUploadComplete={handleResumeUpload}
-                onNext={() => setStep(2)}
-              />
-            )}
-
-            {step === 2 && (
-              <JobPreferencesForm
-                onSubmit={handleJobPreferences}
-                isSubmitting={isSubmitting}
-                onBack={() => setStep(1)}
-              />
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
   );
 };
 

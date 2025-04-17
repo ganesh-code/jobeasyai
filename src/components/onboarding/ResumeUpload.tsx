@@ -14,9 +14,14 @@ import { HelpCircle, Upload } from "lucide-react";
 interface ResumeUploadProps {
   onNext: () => void;
   onBack: () => void;
+  onUploadComplete: (url: string) => void;
 }
 
-const ResumeUpload = ({ onNext, onBack }: ResumeUploadProps) => {
+const ResumeUpload = ({
+  onNext,
+  onBack,
+  onUploadComplete,
+}: ResumeUploadProps) => {
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileUpload = async (
@@ -41,14 +46,18 @@ const ResumeUpload = ({ onNext, onBack }: ResumeUploadProps) => {
       }
 
       if (data) {
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("resumes").getPublicUrl(data.path);
+        onUploadComplete(publicUrl);
         onNext();
       }
     } catch (error: unknown) {
       console.error("Error uploading resume:", error);
       if (error instanceof Error) {
-        alert(`Failed to upload resume: ${error.message}`);
+        toast.error(`Failed to upload resume: ${error.message}`);
       } else {
-        alert("Failed to upload resume. Please try again.");
+        toast.error("Failed to upload resume. Please try again.");
       }
     } finally {
       setIsUploading(false);
