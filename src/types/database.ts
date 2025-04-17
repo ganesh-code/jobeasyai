@@ -3,31 +3,43 @@ export interface Database {
         Tables: {
             user_preferences: {
                 Row: {
-                    id: number;
+                    id: string;
                     user_id: string;
-                    job_title: string | null;
-                    location: string | null;
+                    first_name: string;
+                    job_title: string;
+                    location: string;
                     is_remote: boolean;
                     portfolio_url: string | null;
                     resume_url: string | null;
+                    last_login: string | null;
                     created_at: string;
                     updated_at: string;
                 };
                 Insert: {
+                    id?: string;
                     user_id: string;
-                    job_title?: string | null;
-                    location?: string | null;
+                    first_name: string;
+                    job_title?: string;
+                    location?: string;
                     is_remote: boolean;
                     portfolio_url?: string | null;
                     resume_url?: string | null;
+                    last_login?: string | null;
+                    created_at?: string;
+                    updated_at?: string;
                 };
                 Update: {
+                    id?: string;
                     user_id?: string;
-                    job_title?: string | null;
-                    location?: string | null;
+                    first_name?: string;
+                    job_title?: string;
+                    location?: string;
                     is_remote?: boolean;
                     portfolio_url?: string | null;
                     resume_url?: string | null;
+                    last_login?: string | null;
+                    created_at?: string;
+                    updated_at?: string;
                 };
             };
             job_applications: {

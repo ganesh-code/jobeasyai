@@ -11,6 +11,10 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Onboarding from "./pages/Onboarding";
 import Settings from "./pages/Settings";
+import Jobs from "./pages/Jobs";
+import AppliedJobs from "./pages/AppliedJobs";
+import UserProfile from "@/pages/UserProfile";
+import Upgrade from "@/pages/Upgrade";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +59,31 @@ const App = () => (
                 </AuthGuard>
               }
             />
+            <Route
+              path="/find-jobs"
+              element={
+                <AuthGuard>
+                  <Jobs />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/applied-jobs"
+              element={
+                <AuthGuard>
+                  <AppliedJobs />
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <AuthGuard>
+                  <UserProfile />
+                </AuthGuard>
+              }
+            />
+            <Route path="/upgrade" element={<Upgrade />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface JobPreferencesFormProps {
   onSubmit: (data: {
+    firstName: string;
+    lastName: string;
     jobTitle: string;
     location: string;
     isRemote: boolean;
@@ -29,6 +31,8 @@ const JobPreferencesForm = ({
   isSubmitting,
   onBack,
 }: JobPreferencesFormProps) => {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
   const [isRemote, setIsRemote] = useState(false);
@@ -36,14 +40,44 @@ const JobPreferencesForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobTitle || !location) {
+    if (!firstName || !lastName || !jobTitle || !location) {
       return;
     }
-    onSubmit({ jobTitle, location, isRemote, portfolioUrl });
+    onSubmit({
+      firstName,
+      lastName,
+      jobTitle,
+      location,
+      isRemote,
+      portfolioUrl,
+    });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">First Name</Label>
+          <Input
+            id="firstName"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="e.g. John"
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">Last Name</Label>
+          <Input
+            id="lastName"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="e.g. Doe"
+            required
+          />
+        </div>
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="jobTitle">Job Title</Label>
         <Input
@@ -91,8 +125,13 @@ const JobPreferencesForm = ({
         />
       </div>
 
-      <div className="text-center">
-        <Button type="submit">Next</Button>
+      <div className="flex justify-between">
+        <Button type="button" variant="outline" onClick={onBack}>
+          Back
+        </Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Complete Setup"}
+        </Button>
       </div>
     </form>
   );

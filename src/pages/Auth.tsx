@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
 import { AuthError } from "@supabase/supabase-js";
 
@@ -24,13 +24,29 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [isSignIn, setIsSignIn] = useState(true);
 
+  const updateLastLogin = async (userId: string) => {
+    const { error } = await supabase
+      .from("user_preferences")
+      .update({ last_login: new Date().toISOString() })
+      .eq("user_id", userId);
+
+    if (error && error.code !== "PGRST116") {
+      console.error("Error updating last login:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       if (isSignIn) {
-        await signIn(email, password);
+        const {
+          data: { user },
+        } = await signIn(email, password);
+        if (user) {
+          await updateLastLogin(user.id);
+        }
         navigate("/dashboard");
       } else {
         const { error } = await supabase.auth.signUp({

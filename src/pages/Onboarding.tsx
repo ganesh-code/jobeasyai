@@ -11,10 +11,14 @@ import { PostgrestError } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 
-type UserPreferences =
-  Database["public"]["Tables"]["user_preferences"]["Insert"];
+type UserPreferences = Omit<
+  Database["public"]["Tables"]["user_preferences"]["Insert"],
+  "first_name"
+>;
 
 interface JobPreferencesData {
+  firstName: string;
+  lastName: string;
   jobTitle: string;
   location: string;
   isRemote: boolean;
@@ -39,6 +43,20 @@ const Onboarding = () => {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("No authenticated user found");
 
+      // Create user profile
+      const { error: profileError } = await supabase
+        .from("user_profiles")
+        .insert({
+          user_id: user.id,
+          first_name: data.firstName,
+          last_name: data.lastName,
+          location: data.location,
+          portfolio_url: data.portfolioUrl,
+        });
+
+      if (profileError) throw profileError;
+
+      // Create user preferences
       const preferences: UserPreferences = {
         user_id: user.id,
         job_title: data.jobTitle,
@@ -46,15 +64,16 @@ const Onboarding = () => {
         is_remote: data.isRemote,
         portfolio_url: data.portfolioUrl,
         resume_url: resumeUrl,
+        last_login: new Date().toISOString(),
       };
 
-      const { error } = await supabase
+      const { error: preferencesError } = await supabase
         .from("user_preferences")
         .insert(preferences);
 
-      if (error) throw error;
+      if (preferencesError) throw preferencesError;
 
-      toast.success("Preferences saved successfully!");
+      toast.success("Setup completed successfully!");
       navigate("/dashboard");
     } catch (error) {
       if (error instanceof PostgrestError) {

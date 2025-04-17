@@ -1,174 +1,201 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { PostgrestError } from "@supabase/supabase-js";
-import type { Database } from "@/types/database";
+import { Loader2 } from "lucide-react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { useNavigate } from "react-router-dom";
 
-type UserPreferences = Database["public"]["Tables"]["user_preferences"]["Row"];
+export default function Settings() {
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-const Settings = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [preferences, setPreferences] = useState<Partial<UserPreferences>>({
-    job_title: "",
-    location: "",
-    is_remote: false,
-    portfolio_url: "",
-    resume_url: "",
-  });
-
-  useEffect(() => {
-    fetchUserPreferences();
-  }, []);
-
-  const fetchUserPreferences = async () => {
+  const handleDeleteAccount = async () => {
     try {
+      setLoading(true);
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("No authenticated user found");
+      if (!user) throw new Error("Not authenticated");
 
-      const { data, error } = await supabase
-        .from("user_preferences")
-        .select("*")
+      // Delete user's resume from storage if exists
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("resume_url")
         .eq("user_id", user.id)
         .single();
 
-      if (error) throw error;
-      if (data) {
-        setPreferences(data);
+      if (profile?.resume_url) {
+        const fileName = profile.resume_url.split("/").pop();
+        if (fileName) {
+          await supabase.storage.from("resumes").remove([fileName]);
+        }
       }
+
+      // Delete user data from all tables
+      const { error: deleteError } = await supabase
+        .from("user_profiles")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (deleteError) throw deleteError;
+
+      const { error: preferencesError } = await supabase
+        .from("user_preferences")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (preferencesError) throw preferencesError;
+
+      const { error: applicationsError } = await supabase
+        .from("job_applications")
+        .delete()
+        .eq("user_id", user.id);
+
+      if (applicationsError) throw applicationsError;
+
+      // Sign out the user
+      await supabase.auth.signOut();
+      navigate("/auth");
+      toast.success("Account deleted successfully");
     } catch (error) {
-      console.error("Error fetching preferences:", error);
-      if (error instanceof PostgrestError) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to fetch user preferences");
-      }
+      console.error("Error deleting account:", error);
+      toast.error("Failed to delete account. Please contact support.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSaving(true);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("No authenticated user found");
-
-      const { error } = await supabase.from("user_preferences").upsert({
-        user_id: user.id,
-        ...preferences,
-      });
-
-      if (error) throw error;
-      toast.success("Preferences saved successfully!");
-    } catch (error) {
-      console.error("Error saving preferences:", error);
-      if (error instanceof PostgrestError) {
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to save preferences");
-      }
-    } finally {
-      setIsSaving(false);
-    }
+  const handleConnect = (platform: string) => {
+    // This would be replaced with actual OAuth integration
+    toast.info(`${platform} integration coming soon`);
   };
 
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div>Loading...</div>
-      </DashboardLayout>
-    );
-  }
+  const platforms = [
+    {
+      name: "LinkedIn",
+      description:
+        "Connect your LinkedIn account to import your professional profile and apply to jobs directly.",
+      color: "bg-[#0077B5]",
+    },
+    {
+      name: "Indeed",
+      description:
+        "Link your Indeed account to sync your job applications and profile information.",
+      color: "bg-[#003A9B]",
+    },
+    {
+      name: "Glassdoor",
+      description:
+        "Connect with Glassdoor to access company reviews and salary insights.",
+      color: "bg-[#0CAA41]",
+    },
+    {
+      name: "Naukri",
+      description:
+        "Link your Naukri.com account to expand your job search across India.",
+      color: "bg-[#FF7555]",
+    },
+  ];
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
-        <h1 className="text-3xl font-bold">Settings</h1>
+      <div className="container mx-auto py-8 space-y-6">
+        <h1 className="text-3xl font-bold">Account Settings</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Preferences</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="job_title">Desired Job Title</Label>
-                <Input
-                  id="job_title"
-                  value={preferences.job_title || ""}
-                  onChange={(e) =>
-                    setPreferences({
-                      ...preferences,
-                      job_title: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. Software Engineer"
-                />
+        {/* Platform Integrations */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Platform Integrations</CardTitle>
+            <CardDescription>
+              Connect your accounts from other job platforms to enhance your job
+              search experience
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {platforms.map((platform) => (
+              <div
+                key={platform.name}
+                className="flex items-center justify-between p-4 border rounded-lg"
+              >
+                <div className="space-y-1">
+                  <h3 className="font-medium">{platform.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {platform.description}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => handleConnect(platform.name)}
+                  variant="outline"
+                >
+                  Connect
+                </Button>
               </div>
+            ))}
+          </CardContent>
+        </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="location">Preferred Location</Label>
-                <Input
-                  id="location"
-                  value={preferences.location || ""}
-                  onChange={(e) =>
-                    setPreferences({ ...preferences, location: e.target.value })
-                  }
-                  placeholder="e.g. New York, NY"
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_remote"
-                  checked={preferences.is_remote || false}
-                  onCheckedChange={(checked) =>
-                    setPreferences({ ...preferences, is_remote: checked })
-                  }
-                />
-                <Label htmlFor="is_remote">Open to Remote Work</Label>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="portfolio_url">Portfolio URL</Label>
-                <Input
-                  id="portfolio_url"
-                  type="url"
-                  value={preferences.portfolio_url || ""}
-                  onChange={(e) =>
-                    setPreferences({
-                      ...preferences,
-                      portfolio_url: e.target.value,
-                    })
-                  }
-                  placeholder="https://your-portfolio.com"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
+        {/* Delete Account */}
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger Zone</CardTitle>
+            <CardDescription>
+              Permanently delete your account and all associated data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">Delete Account</Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete
+                    your account and remove all your data from our servers.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={handleDeleteAccount}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Delete Account"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
-};
-
-export default Settings;
+}
